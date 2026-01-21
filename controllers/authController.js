@@ -1,13 +1,13 @@
-const db = require("../config/db");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-
 exports.adminLogin = (req, res) => {
+  console.log("LOGIN BODY FROM FRONTEND:", req.body);
+
   const { username, password } = req.body;
 
-  const sql = "SELECT * FROM admin WHERE username = ?";
+  const sql = "SELECT * FROM `admin` WHERE username = ?";
 
   db.query(sql, [username], async (err, results) => {
+    console.log("DB RESULT:", results);
+
     if (err) {
       console.error(err);
       return res.status(500).json({ error: "Database error" });
@@ -30,9 +30,6 @@ exports.adminLogin = (req, res) => {
       { expiresIn: "1d" }
     );
 
-    res.json({
-      message: "Login successful",
-      token,
-    });
+    res.json({ token });
   });
 };

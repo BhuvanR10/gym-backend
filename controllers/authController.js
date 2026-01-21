@@ -25,7 +25,7 @@ exports.adminLogin = (req, res) => {
     }
 
     const token = jwt.sign(
-      { admin_id: admin.id },
+      { admin_id: admin.admin_id },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );

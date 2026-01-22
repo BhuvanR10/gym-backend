@@ -12,13 +12,22 @@ const biometricRoutes = require("./routes/biometric");
 const app = express();
 
 // ================= Middleware =================
-app.use(cors({
-  origin: [
-    "https://gym-frontend-phi-ten.vercel.app",
-    "http://localhost:3000"
-  ],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",
+      "https://gym-frontend-phi-ten.vercel.app",
+      "https://gym-frontend-k6b4fjmrr-bhuvan-rs-projects-a0147fa1.vercel.app"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+
+/* IMPORTANT: allow preflight */
+app.options("*", cors());
+
 app.use(express.json());
 
 // ================= Database =================

@@ -7,7 +7,12 @@
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "keywords": ["gym", "attendance", "mysql", "express"],
+  "keywords": [
+    "gym",
+    "attendance",
+    "mysql",
+    "express"
+  ],
   "author": "Bhuvan R",
   "license": "ISC",
   "type": "commonjs",

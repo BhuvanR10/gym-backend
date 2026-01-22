@@ -10,6 +10,9 @@ const { welcomeTemplate } = require("../services/emailTemplates");
    GET /api/members
 ====================================================== */
 router.get("/", auth, (req, res) => {
+  // 🚫 Disable caching (VERY IMPORTANT for Vercel / browser)
+  res.setHeader("Cache-Control", "no-store");
+
   const { status, plan_type, search } = req.query;
 
   let sql = `
@@ -63,7 +66,9 @@ router.get("/", auth, (req, res) => {
       console.error("FETCH MEMBERS ERROR:", err);
       return res.status(500).json({ message: "Failed to fetch members" });
     }
-    res.json(result);
+
+    // ✅ Always send fresh data
+    res.status(200).json(result);
   });
 });
 

@@ -5,12 +5,15 @@ const db = require("../config/db");
 const { sendEmail } = require("../services/emailService");
 const { welcomeTemplate } = require("../services/emailTemplates");
 
+/* ===== PRE-FLIGHT SAFETY ===== */
+router.options("*", (req, res) => res.sendStatus(200));
+
 /* ======================================================
    GET ALL MEMBERS
    GET /api/members
 ====================================================== */
 router.get("/", auth, (req, res) => {
-  // 🚫 Disable caching (VERY IMPORTANT for Vercel / browser)
+  // Prevent caching (backend only)
   res.setHeader("Cache-Control", "no-store");
 
   const { status, plan_type, search } = req.query;
@@ -35,7 +38,7 @@ router.get("/", auth, (req, res) => {
   const conditions = [];
   const params = [];
 
-  if (status && (status === "Active" || status === "Expired")) {
+  if (status && ["Active", "Expired"].includes(status)) {
     conditions.push(`
       CASE
         WHEN CURDATE() > DATE(end_date) THEN 'Expired'
@@ -55,7 +58,7 @@ router.get("/", auth, (req, res) => {
     params.push(`%${search}%`);
   }
 
-  if (conditions.length > 0) {
+  if (conditions.length) {
     sql += " WHERE " + conditions.join(" AND ");
   }
 
@@ -66,15 +69,12 @@ router.get("/", auth, (req, res) => {
       console.error("FETCH MEMBERS ERROR:", err);
       return res.status(500).json({ message: "Failed to fetch members" });
     }
-
-    // ✅ Always send fresh data
-    res.status(200).json(result);
+    res.json(result);
   });
 });
 
 /* ======================================================
    ADD MEMBER
-   POST /api/members/add
 ====================================================== */
 router.post("/add", auth, (req, res) => {
   const {
@@ -122,7 +122,6 @@ router.post("/add", auth, (req, res) => {
 
 /* ======================================================
    UPDATE MEMBER
-   PUT /api/members/update/:id
 ====================================================== */
 router.put("/update/:id", auth, (req, res) => {
   const { id } = req.params;
@@ -130,70 +129,48 @@ router.put("/update/:id", auth, (req, res) => {
 
   const sql = `
     UPDATE members
-    SET
-      name = ?,
-      phone = ?,
-      email = ?,
-      plan_type = ?,
-      start_date = ?,
-      end_date = ?
-    WHERE member_id = ?
+    SET name=?, phone=?, email=?, plan_type=?, start_date=?, end_date=?
+    WHERE member_id=?
   `;
 
-  db.query(
-    sql,
-    [name, phone, email, plan_type, start_date, end_date, id],
-    (err, result) => {
-      if (err) {
-        console.error("UPDATE MEMBER ERROR:", err);
-        return res.status(500).json({ message: "Update failed" });
-      }
-
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "Member not found" });
-      }
-
-      res.json({ message: "Member updated successfully" });
+  db.query(sql, [name, phone, email, plan_type, start_date, end_date, id], (err, result) => {
+    if (err) {
+      console.error("UPDATE MEMBER ERROR:", err);
+      return res.status(500).json({ message: "Update failed" });
     }
-  );
+    if (!result.affectedRows) {
+      return res.status(404).json({ message: "Member not found" });
+    }
+    res.json({ message: "Member updated successfully" });
+  });
 });
 
 /* ======================================================
    DELETE MEMBER
-   DELETE /api/members/:id
 ====================================================== */
 router.delete("/:id", auth, (req, res) => {
-  const { id } = req.params;
-
-  db.query(
-    "DELETE FROM members WHERE member_id = ?",
-    [id],
-    (err) => {
-      if (err) {
-        console.error("DELETE MEMBER ERROR:", err);
-        return res.status(500).json({ message: "Delete failed" });
-      }
-      res.json({ message: "Member deleted successfully" });
+  db.query("DELETE FROM members WHERE member_id = ?", [req.params.id], err => {
+    if (err) {
+      console.error("DELETE MEMBER ERROR:", err);
+      return res.status(500).json({ message: "Delete failed" });
     }
-  );
+    res.json({ message: "Member deleted successfully" });
+  });
 });
 
 /* ======================================================
    RENEW MEMBERSHIP
-   POST /api/members/:id/renew
 ====================================================== */
 router.post("/:id/renew", auth, (req, res) => {
-  const { id } = req.params;
   const { new_end_date } = req.body;
-
   if (!new_end_date) {
     return res.status(400).json({ message: "New end date required" });
   }
 
   db.query(
-    "UPDATE members SET end_date = ? WHERE member_id = ?",
-    [new_end_date, id],
-    (err) => {
+    "UPDATE members SET end_date=? WHERE member_id=?",
+    [new_end_date, req.params.id],
+    err => {
       if (err) {
         console.error("RENEW ERROR:", err);
         return res.status(500).json({ message: "Renewal failed" });
@@ -204,23 +181,15 @@ router.post("/:id/renew", auth, (req, res) => {
 });
 
 /* ======================================================
-   MEMBERS EXPIRING SOON
-   GET /api/members/expiring/soon
+   EXPIRING MEMBERS
 ====================================================== */
 router.get("/expiring/soon", auth, (req, res) => {
   const sql = `
-    SELECT
-      member_id,
-      name,
-      phone,
-      email,
-      end_date,
-      DATEDIFF(end_date, CURDATE()) AS days_left
+    SELECT member_id, name, phone, email, end_date,
+    DATEDIFF(end_date, CURDATE()) AS days_left
     FROM members
-    WHERE DATE(end_date)
-    BETWEEN CURDATE()
-    AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
-    ORDER BY end_date ASC
+    WHERE DATEDIFF(end_date, CURDATE()) BETWEEN 0 AND 7
+    ORDER BY end_date
   `;
 
   db.query(sql, (err, result) => {

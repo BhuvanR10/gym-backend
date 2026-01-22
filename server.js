@@ -20,7 +20,7 @@ app.use(
       "https://gym-frontend-k6b4fjmrr-bhuvan-rs-projects-a0147fa1.vercel.app"
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cache-Control", "Pragma"],
     credentials: true,
   })
 );

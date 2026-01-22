@@ -4,7 +4,8 @@ const auth = require("../middleware/authMiddleware");
 const db = require("../config/db");
 
 router.get("/stats", auth, (req, res) => {
-    console.log("Dashboard stats requested by admin:", req.admin);
+  console.log("Dashboard stats requested by user:", req.user); // ✅ FIX
+
   const sql = `
     SELECT
       (SELECT COUNT(*) FROM members) AS totalMembers,
@@ -15,9 +16,13 @@ router.get("/stats", auth, (req, res) => {
 
   db.query(sql, (err, result) => {
     if (err) {
-      console.error(err);
-      return res.status(500).json({ message: "Dashboard stats error" });
+      console.error("DASHBOARD STATS SQL ERROR:", err); // 🔥 IMPORTANT
+      return res.status(500).json({
+        message: "Dashboard stats error",
+        error: err.message,
+      });
     }
+
     res.json(result[0]);
   });
 });

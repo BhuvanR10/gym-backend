@@ -1,14 +1,20 @@
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: process.env.EMAIL_HOST,
+  port: Number(process.env.EMAIL_PORT),
+  secure: false, // MUST be false for port 587
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  tls: {
+    rejectUnauthorized: false,
+  },
 });
 
-transporter.verify((err) => {
+// Verify connection at startup
+transporter.verify((err, success) => {
   if (err) {
     console.error("❌ Email transporter error:", err);
   } else {
@@ -17,12 +23,18 @@ transporter.verify((err) => {
 });
 
 const sendEmail = async (to, subject, html) => {
-  await transporter.sendMail({
-    from: `"Fitness Empire" <${process.env.EMAIL_USER}>`,
-    to,
-    subject,
-    html,
-  });
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM,
+      to,
+      subject,
+      html,
+    });
+
+    console.log("📧 Email sent to:", to);
+  } catch (error) {
+    console.error("❌ Email send error:", error);
+  }
 };
 
 module.exports = { sendEmail };

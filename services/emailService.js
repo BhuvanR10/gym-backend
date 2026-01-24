@@ -8,18 +8,21 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const sendEmail = async (to, subject, html) => {
-  try {
-    await transporter.sendMail({
-      from: `"Gym Admin" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      html,
-    });
-    console.log("📧 Email sent to:", to);
-  } catch (error) {
-    console.error("Email error:", error);
+transporter.verify((err) => {
+  if (err) {
+    console.error("❌ Email transporter error:", err);
+  } else {
+    console.log("✅ Email transporter ready");
   }
+});
+
+const sendEmail = async (to, subject, html) => {
+  await transporter.sendMail({
+    from: `"Fitness Empire" <${process.env.EMAIL_USER}>`,
+    to,
+    subject,
+    html,
+  });
 };
 
 module.exports = { sendEmail };

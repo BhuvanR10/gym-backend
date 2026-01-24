@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const auth = require("../middleware/authMiddleware");
-const db = require("../config/db");
+const { query } = require("../config/db");
 const { sendEmail } = require("../services/emailService");
 const { welcomeTemplate } = require("../services/emailTemplates");
 
@@ -199,6 +199,23 @@ router.get("/expiring/soon", auth, (req, res) => {
     }
     res.json(result);
   });
+});
+
+router.get("/stats", auth, async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT
+        (SELECT COUNT(*) FROM members) AS totalMembers,
+        (SELECT COUNT(*) FROM members WHERE CURDATE() <= DATE(end_date)) AS activeMembers,
+        (SELECT COUNT(*) FROM members WHERE CURDATE() > DATE(end_date)) AS expiredMembers,
+        (SELECT COUNT(*) FROM attendance WHERE DATE(check_time) = CURDATE()) AS todayAttendance
+    `);
+
+    res.json(result[0]);
+  } catch (err) {
+    console.error("DASHBOARD STATS ERROR:", err);
+    res.status(500).json({ message: "Dashboard stats error" });
+  }
 });
 
 module.exports = router;

@@ -1,20 +1,40 @@
 const mysql = require("mysql2");
 
-const db = mysql.createConnection({
+const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
-  ssl: { rejectUnauthorized: true }
+
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+
+  connectTimeout: 30000,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
 });
 
-db.connect((err) => {
-  if (err) {
-    console.error("❌ MySQL connection failed:", err);
-  } else {
-    console.log("✅ MySQL connected");
-  }
+pool.on("connection", (connection) => {
+  console.log("✅ MySQL connected:", connection.threadId);
 });
 
-module.exports = db;
+pool.on("error", (err) => {
+  console.error("❌ MySQL Pool Error:", err);
+});
+
+/* ===============================
+   PROMISE QUERY HELPER (OPTIONAL)
+================================ */
+const query = (sql, params = []) =>
+  new Promise((resolve, reject) => {
+    pool.query(sql, params, (err, results) => {
+      if (err) return reject(err);
+      resolve(results);
+    });
+  });
+
+module.exports = {
+  pool,
+  query,
+};
